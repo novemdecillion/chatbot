@@ -1,0 +1,18 @@
+fragment messageNode on MessageNode {
+  text
+  link
+}
+
+fragment sessionChatMessage on SessionChatMessage {
+  sessionId
+  nodes {
+    ...messageNode
+  }
+  isSend
+}
+
+subscription messages {
+  message {
+    ...sessionChatMessage
+  }
+}

@@ -1,0 +1,22 @@
+type MessageNode {
+  text: String!
+  link: String
+}
+
+type SessionChatMessage {
+  sessionId: ID!
+  nodes: [MessageNode!]!
+  isSend: Boolean!
+}
+
+type Subscription {
+  message: SessionChatMessage!
+}
+
+type Session {
+  sessionId: ID!
+}
+
+type Query {
+  sessions: [Session!]
+}

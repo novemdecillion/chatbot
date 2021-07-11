@@ -1,0 +1,136 @@
+$font-side: 16;
+
+@mixin message {
+  // display: flex;
+  // justify-content: flex-start;
+
+  background: white;
+  border-radius: 5px;
+  position: relative;
+  display: inline-block;
+  word-break: break-all;
+  overflow-wrap: break-word;
+  margin-top: 2px;
+  margin-bottom: 2px;
+  padding: 2px;
+}
+
+// https://stackoverflow.com/questions/22672368/how-to-make-a-transparent-html-button/22672444
+@mixin transparent-button {
+  background-color: transparent;
+  background-repeat: no-repeat;
+  border: none;
+  cursor: pointer;
+  overflow: hidden;
+  outline: none;
+}
+
+chat-terminal {
+  position: fixed;
+  bottom: 5px;
+  right: 5px;
+  border-radius: #{$font-side / 4}px;
+
+  // Prevent Chrome on Windows from adding a focus outline. For details, see
+  // https://github.com/twbs/bootstrap/pull/10951.
+  outline: 0;
+  // We deliberately don't use `-webkit-overflow-scrolling: touch;` due to a
+  // gnarly iOS Safari bug: https://bugs.webkit.org/show_bug.cgi?id=158342
+  // See also https://github.com/twbs/bootstrap/issues/17695
+
+  width: 400px;
+
+  border: 1px solid gray;
+
+  font-family: 'Hiragino Kaku Gothic Pro', 'Meiryo';
+
+  font-size: #{$font-side}px;
+
+  background: linear-gradient(to right, lightpink, hotpink);
+  opacity: 90%;
+
+  &::part(header) {
+    display: flex;
+  }
+
+  &::part(title) {
+    margin: 1px 10px;
+    flex: 1 1 auto
+  }
+
+  &::part(toggle) {
+    @include transparent-button();
+
+    // https://icons.getbootstrap.com/icons/arrow-down-circle/
+    background-image: url("data:image/svg+xml,<svg viewBox='0 0 16 16' fill='currentColor' xmlns='http://www.w3.org/2000/svg'><path fill-rule='evenodd' d='M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z'/><path fill-rule='evenodd' d='M8 4a.5.5 0 0 1 .5.5v5.793l2.146-2.147a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 1 1 .708-.708L7.5 10.293V4.5A.5.5 0 0 1 8 4z'/></svg>");
+
+    width: #{$font-side * 1.5}px;
+    margin: 2px;
+  }
+
+
+  &::part(body) {
+    height: 480px;
+    background-color: lightcyan;
+    opacity: 90%;
+    margin: 2px;
+    overflow-y: scroll;
+    overflow-x: hidden;
+
+    display: flex;
+    flex-direction: column;
+  }
+
+  &::part(footer) {
+    margin: 2px;
+    display: flex;
+  }
+
+  &::part(query-text) {
+    flex: 1 1 auto;
+    padding: #{$font-side / 2}px;
+
+    border-right: none;
+    border-top-left-radius: #{$font-side / 4}px;
+    border-bottom-left-radius: #{$font-side / 4}px;
+    border-color: white;
+  }
+
+  &::part(query-button) {
+    border-top-right-radius: #{$font-side / 4}px;
+    border-bottom-right-radius: #{$font-side / 4}px;
+    border-color: white;
+  }
+
+  &::part(send-message) {
+    @include message();
+
+    background-position: 2px 2px;
+    background-image: url("data:image/svg+xml,<svg width='1em' height='1em' viewBox='0 0 16 16' fill='currentColor' xmlns='http://www.w3.org/2000/svg'><path fill-rule='evenodd' d='M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z'/><path fill-rule='evenodd' d='M12.331 9.5a1 1 0 0 1 0 1A4.998 4.998 0 0 1 8 13a4.998 4.998 0 0 1-4.33-2.5A1 1 0 0 1 4.535 9h6.93a1 1 0 0 1 .866.5z'/><path d='M7 6.5c0 .828-.448 0-1 0s-1 .828-1 0S5.448 5 6 5s1 .672 1 1.5zm4 0c0 .828-.448 0-1 0s-1 .828-1 0S9.448 5 10 5s1 .672 1 1.5z'/></svg>");
+    background-repeat: no-repeat;
+
+    padding-left: #{$font-side * 2}px;
+    margin-right: #{$font-side * 1}px;
+  }
+
+  &::part(receive-message) {
+    @include message();
+    margin-left: #{$font-side * 3}px;
+  }
+}
+
+
+chat-terminal.close {
+  &::part(body) {
+    display: none;
+  }
+
+  &::part(footer) {
+    display: none;
+  }
+
+  &::part(toggle) {
+    // https://icons.getbootstrap.com/icons/arrow-up-circle/
+    background-image: url("data:image/svg+xml,<svg viewBox='0 0 16 16' fill='currentColor' xmlns='http://www.w3.org/2000/svg'><path fill-rule='evenodd' d='M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z'/><path fill-rule='evenodd' d='M8 12a.5.5 0 0 0 .5-.5V5.707l2.146 2.147a.5.5 0 0 0 .708-.708l-3-3a.5.5 0 0 0-.708 0l-3 3a.5.5 0 1 0 .708.708L7.5 5.707V11.5a.5.5 0 0 0 .5.5z'/></svg>");
+  }
+}

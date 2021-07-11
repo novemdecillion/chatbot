@@ -1,0 +1,33 @@
+app:
+  scenario:
+    file: classpath:/sample-scenario.yml
+
+server:
+  port: 8443
+  ssl:
+    key-store: keystore.p12
+    key-store-password: password123
+    keyStoreType: PKCS12
+    keyAlias: chatbot
+
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost/chatbot
+    username: admin
+    password: password123
+
+  flyway:
+    clean-on-validation-error: true
+
+graphql:
+  servlet:
+    mapping: /api/v1
+    subscriptions:
+      websocket:
+        path: /api/v1
+    cors:
+      allowed-origins: "*"
+    context-setting: PER_REQUEST_WITH_INSTRUMENTATION
+  tools:
+    schema-location-pattern: graphql/*.graphqls
