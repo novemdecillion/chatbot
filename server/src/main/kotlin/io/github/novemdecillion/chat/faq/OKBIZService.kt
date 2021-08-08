@@ -25,6 +25,7 @@ import java.net.URI
 import java.time.Duration
 import java.time.OffsetDateTime
 
+@ConditionalOnProperty(value = ["app.faq.okbiz.url"], havingValue = "")
 @ConfigurationProperties(prefix = "app.faq.okbiz")
 @ConstructorBinding
 data class OKBIZFAQProperties(
@@ -90,7 +91,7 @@ data class FaqShowResponse(
 
 
 @Service
-@ConditionalOnProperty(value = ["app.faq.okbiz"], havingValue = "false")
+@ConditionalOnProperty(value = ["app.faq.okbiz.url"], havingValue = "")
 class OKBIZService(private val okbizFaqProperties: OKBIZFAQProperties, val scenarioService: ScenarioService,
                    restTemplateBuilder: RestTemplateBuilder, objectMapper: ObjectMapper) {
   companion object {
