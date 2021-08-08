@@ -38,6 +38,7 @@ class ScenarioService(scenarioProperties: ScenarioProperties) {
     const val KEY_TIMEOUT = "${DELIMITER}time out"
     const val KEY_NO_RESULT = "${DELIMITER}no result"
     const val KEY_UNKNOWN_ERROR = "${DELIMITER}unknown error"
+    const val KEY_NO_SUPPORTED = "${DELIMITER}not supported"
   }
 
   val conversations: Map<String?, Pair<Conversation, ChatMessage>>
@@ -45,8 +46,23 @@ class ScenarioService(scenarioProperties: ScenarioProperties) {
   init {
     ObjectMapper(YAMLFactory())
       .registerKotlinModule()
-      .readValue<List<Conversation>>(scenarioProperties.file.inputStream)
+      .readValue<MutableList<Conversation>>(scenarioProperties.file.inputStream)
       .let { rootConversations ->
+        // デフォルトのエラーメッセージ
+        val errorKeys = mutableSetOf(KEY_TIMEOUT, KEY_NO_RESULT, KEY_UNKNOWN_ERROR, KEY_NO_SUPPORTED)
+        rootConversations.forEach { errorKeys.remove("$DELIMITER${it.title}") }
+        errorKeys
+          .forEach {
+            val key = it.removePrefix(DELIMITER)
+            when(it) {
+              KEY_NO_RESULT -> rootConversations.add(Conversation(key, "該当するFAQがありません。"))
+              KEY_TIMEOUT -> rootConversations.add(Conversation(key, "タイムアウトが発生しました。"))
+              KEY_UNKNOWN_ERROR -> rootConversations.add(Conversation(key, "不明なエラーが発生しました。"))
+
+              KEY_NO_SUPPORTED -> rootConversations.add(Conversation(key, "この機能はご利用いただけません。"))
+            }
+          }
+
         val asciiDoctor: Asciidoctor = Asciidoctor.Factory.create()
         this.conversations = convertConversationToChatMessage(rootConversations, asciiDoctor, mutableMapOf())
       }
@@ -85,4 +101,7 @@ class ScenarioService(scenarioProperties: ScenarioProperties) {
   fun findConversation(title: String? = null): Pair<Conversation, ChatMessage> {
     return this.conversations[title] ?: throw IllegalArgumentException()
   }
+
+  fun isExist(title: String? = null) = this.conversations[title] != null
+
 }
