@@ -2,14 +2,6 @@ app:
   scenario:
     file: classpath:/sample-scenario.yml
 
-server:
-  port: 8443
-  ssl:
-    key-store: keystore.p12
-    key-store-password: password123
-    keyStoreType: PKCS12
-    keyAlias: chatbot
-
 spring:
   datasource:
     driver-class-name: org.postgresql.Driver
