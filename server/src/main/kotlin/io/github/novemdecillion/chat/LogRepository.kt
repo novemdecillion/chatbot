@@ -1,6 +1,5 @@
 package io.github.novemdecillion.chat
 
-import io.github.novemdecillion.adapter.jooq.tables.pojos.LogsEntity
 import io.github.novemdecillion.adapter.jooq.tables.records.LogsRecord
 import org.jooq.DSLContext
 import org.springframework.stereotype.Repository
