@@ -23,13 +23,15 @@ export class Conversation {
 
   constructor(private serverUrl, private onMessage: (message: ChatMessage) => void = ()=>{}) {}
 
-  connect() {
+  connect(message?: string) {
     if (this.socket !== null) {
       this.close();
     }
-    this.socket = new WebSocket(this.serverUrl);
+    this.socket = new WebSocket(this.serverUrl + ((undefined !== message) ? '?reconnect=true' : ''));
     this.socket.onopen = () => {
-      console.log('socket connected');
+      if (undefined !== message) {
+        this.socket.send(message);
+      }
     };
     this.socket.onerror = (event: Event) => {
       console.log(event);
@@ -58,6 +60,14 @@ export class Conversation {
   }
 
   send(message: string) {
-    this.socket.send(message);
+    if (this.socket) {
+      this.socket.send(message);
+    } else {
+      this.connect(message)
+    }
+  }
+
+  clear() {
+    this.messages = [];
   }
 }

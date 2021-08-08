@@ -9,12 +9,16 @@ import io.github.novemdecillion.chat.faq.OKBIZService
 import io.github.novemdecillion.chat.scenario.ScenarioService
 import org.apache.commons.lang3.StringUtils
 import org.reactivestreams.Publisher
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import org.springframework.web.socket.CloseStatus
 import org.springframework.web.socket.TextMessage
 import org.springframework.web.socket.WebSocketSession
 import org.springframework.web.socket.handler.TextWebSocketHandler
+import org.springframework.web.util.UriComponentsBuilder
 import reactor.core.publisher.Sinks
+import java.net.URLEncoder
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 enum class MessageType {
@@ -57,14 +61,37 @@ data class Session(val sessionId: String)
 @Component
 class ChatSocketHandler(val mapper: ObjectMapper, val scenarioService: ScenarioService, val okbizService: OKBIZService?, val logRepository: LogRepository)
   : TextWebSocketHandler(), GraphQLQueryResolver, GraphQLSubscriptionResolver {
+
+  companion object {
+    val log = LoggerFactory.getLogger(ChatSocketHandler::class.java)
+  }
+
   val sessions = ConcurrentHashMap<String, WebSocketSession>()
   val messageSink = Sinks.many().unicast().onBackpressureBuffer<SessionChatMessage>()
 
   override fun afterConnectionEstablished(session: WebSocketSession) {
+    val isNewConnect: Boolean = session.uri
+      ?.let { uri ->
+        // 再接続ではない
+        UriComponentsBuilder.fromUri(uri).build().queryParams["reconnect"]
+          ?.singleOrNull()
+          ?.lowercase(Locale.getDefault())
+          ?.let { reconnect ->
+            val isReconnect = (reconnect == "true")
+            if (isReconnect) {
+              log.info("再接続: ${session.remoteAddress}")
+            }
+            !isReconnect
+          }
+      }
+      ?: true
+
     sessions.putIfAbsent(session.id, session)
 
-    val replyMessage = scenarioService.findChatMessage(ScenarioService.KEY_SCENARIO)
-    replayMessageWithLog(session, replyMessage, null, ScenarioService.KEY_SCENARIO)
+    if (isNewConnect) {
+      val replyMessage = scenarioService.findChatMessage(ScenarioService.KEY_SCENARIO)
+      replayMessageWithLog(session, replyMessage, null, ScenarioService.KEY_SCENARIO)
+    }
   }
 
   override fun afterConnectionClosed(session: WebSocketSession, status: CloseStatus) {
@@ -88,19 +115,27 @@ class ChatSocketHandler(val mapper: ObjectMapper, val scenarioService: ScenarioS
           replayMessageWithLog(session, questionnaireMessage, null, ScenarioService.KEY_QUESTIONNAIRE)
         }
       }
-      MessageType.TALK -> okbizService?.also { service ->
-        val (replyMessage, isFinish) = if (sendMessage.link.isNullOrEmpty()) {
-          service.search(sendMessage.text)
-        } else {
-          service.show(sendMessage.link)
-        }
+      MessageType.TALK -> okbizService
+        ?.also { service ->
+          val (replyMessage, isFinish) = if (sendMessage.link.isNullOrEmpty()) {
+            service.search(sendMessage.text)
+          } else {
+            service.show(sendMessage.link)
+          }
 
-        replayMessageWithLog(session, replyMessage, sendMessage.text)
-        if (isFinish) {
-          val questionnaireMessage = scenarioService.findChatMessage(ScenarioService.KEY_QUESTIONNAIRE)
-          replayMessageWithLog(session, questionnaireMessage, null, ScenarioService.KEY_QUESTIONNAIRE)
+          replayMessageWithLog(session, replyMessage, sendMessage.text)
+          if (isFinish) {
+            scenarioService.findChatMessage(ScenarioService.KEY_QUESTIONNAIRE)
+              ?.also { questionnaireMessage ->
+                replayMessageWithLog(session, questionnaireMessage, null, ScenarioService.KEY_QUESTIONNAIRE)
+              }
+          }
         }
-      }
+        ?: run {
+          val questionnaireMessage = scenarioService.findChatMessage(ScenarioService.KEY_NO_SUPPORTED)
+          replayMessageWithLog(session, questionnaireMessage, null, ScenarioService.KEY_NO_SUPPORTED)
+
+        }
     }
   }
 

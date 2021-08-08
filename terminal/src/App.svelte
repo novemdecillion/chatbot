@@ -10,6 +10,7 @@
   export let serverurl: string;
   export let openclass: string = 'open';
   export let closeclass: string = 'close';
+  export let cantalk: string = 'true';
 
   let conversation = new Conversation(serverurl, () => {
     messages = [...conversation.messages];
@@ -17,7 +18,7 @@
   });
 
   let isOpen = false;
-  let  messages: ChatMessage[];
+  let messages: ChatMessage[];
   $: messages = [];
 
   let sendText: string;
@@ -52,6 +53,7 @@
       conversation.connect();
     } else {
       conversation.close();
+      conversation.clear();
     }
   }
 
@@ -64,8 +66,6 @@
   }
 
   function onKeyupEvent(event: KeyboardEvent): void {
-    console.log(event);
-
     if (event.ctrlKey && (event.code === 'Enter')) {
       onSend();
     }
@@ -115,7 +115,8 @@
   {/each}
 </div>
 
-<div part="footer">
+{#if cantalk == 'true'}
+<div part="footer" >
   <input type="text" part="query-text"
     placeholder="こちらに入力してください。"
     bind:value={sendText}
@@ -123,3 +124,4 @@
 
   <button type="button" part="query-button" on:click={onSend}>送信</button>
 </div>
+{/if}
