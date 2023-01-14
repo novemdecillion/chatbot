@@ -10,20 +10,17 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.ConstructorBinding
 import org.springframework.boot.web.client.RestTemplateBuilder
+import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType
-import org.springframework.http.RequestEntity
 import org.springframework.http.converter.FormHttpMessageConverter
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter
 import org.springframework.stereotype.Service
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.exchange
-import org.springframework.web.client.getForEntity
-import java.net.URI
 import java.time.Duration
-import java.time.OffsetDateTime
 
 @ConditionalOnProperty(value = ["app.faq.okbiz.url"], havingValue = "")
 @ConfigurationProperties(prefix = "app.faq.okbiz")
@@ -35,7 +32,9 @@ data class OKBIZFAQProperties(
   val username: String,
   val password: String,
   val timeout: Long,
-  val maxResult: Int
+  val maxResult: Int,
+  val basicAuthUsername: String? = null,
+  val basicAuthPassword: String? = null
 )
 
 data class OAuthTokenResponse(
@@ -104,9 +103,20 @@ class OKBIZService(private val okbizFaqProperties: OKBIZFAQProperties, val scena
     .setReadTimeout(Duration.ofSeconds(okbizFaqProperties.timeout))
     .build()
 
+  private fun setBasicAuthIfNeed(headers: HttpHeaders) {
+    if ((okbizFaqProperties.basicAuthUsername != null)
+        && (okbizFaqProperties.basicAuthPassword != null)) {
+      headers.setBasicAuth(okbizFaqProperties.basicAuthUsername, okbizFaqProperties.basicAuthPassword)
+    }
+  }
+
   fun token(): String? {
     val responseEntity = try {
-      val header = HttpHeaders().also { it.contentType = MediaType.APPLICATION_FORM_URLENCODED }
+      val header = HttpHeaders()
+        .also {
+          it.contentType = MediaType.APPLICATION_FORM_URLENCODED
+          setBasicAuthIfNeed(it)
+        }
 
       val queryParam = LinkedMultiValueMap<String, String>().also {
         it["operator"] = "true"
@@ -115,11 +125,11 @@ class OKBIZService(private val okbizFaqProperties: OKBIZFAQProperties, val scena
         it["\$username"] = okbizFaqProperties.username
         it["\$password"] = okbizFaqProperties.password
       }
-      val requestEntity = RequestEntity(
-        queryParam, header, HttpMethod.POST,
-        URI.create("${okbizFaqProperties.url}/oauth/token?grant_type=password")
-      )
-      restTemplate.exchange<OAuthTokenResponse>(requestEntity)
+      val requestEntity = HttpEntity(queryParam, header)
+      restTemplate.exchange<OAuthTokenResponse>(
+        "${okbizFaqProperties.url}/oauth/token?grant_type=password",
+        HttpMethod.POST,
+        requestEntity)
     } catch (ex: Throwable) {
       log.error("トークンの取得に失敗しました。", ex)
       null
@@ -135,9 +145,16 @@ class OKBIZService(private val okbizFaqProperties: OKBIZFAQProperties, val scena
       }
 
     val responseEntity = try {
-      restTemplate.getForEntity<FaqSearchResponse>(
-      "${okbizFaqProperties.url}/api/faq/search" +
-        "?access_token=${resolvedToken}&site_id=1&search_string=${searchWord}&search_type=1&per_page=${okbizFaqProperties.maxResult}")
+      val header = HttpHeaders()
+        .also {
+          setBasicAuthIfNeed(it)
+        }
+      val requestEntity = HttpEntity<Unit>(header)
+
+      restTemplate.exchange<FaqSearchResponse>(
+      "${okbizFaqProperties.url}/api/faq/search?access_token=${resolvedToken}&site_id=1&search_string=${searchWord}&search_type=1&per_page=${okbizFaqProperties.maxResult}",
+        HttpMethod.GET,
+        requestEntity)
     } catch (ex: Throwable) {
       log.error("FAQ検索に失敗しました。", ex)
       return scenarioService.findChatMessage(ScenarioService.KEY_UNKNOWN_ERROR) to false
@@ -159,7 +176,7 @@ class OKBIZService(private val okbizFaqProperties: OKBIZFAQProperties, val scena
             MessageNode(it.title, it.id)
           }
           .let {
-            ChatMessage(MessageType.TALK, it, false) to false
+            ChatMessage(MessageType.TALK, it, false) to true
           }
       }
     }
@@ -173,15 +190,23 @@ class OKBIZService(private val okbizFaqProperties: OKBIZFAQProperties, val scena
       }
 
     return try {
-      val responseEntity = restTemplate.getForEntity<FaqShowResponse>(
-        "${okbizFaqProperties.url}/api/faq/show" +
-          "?access_token=${resolvedToken}&site_id=1&id=${faqId}")
+      val header = HttpHeaders()
+        .also {
+          setBasicAuthIfNeed(it)
+        }
+      val requestEntity = HttpEntity<Unit>(header)
+
+      val responseEntity = restTemplate.exchange<FaqShowResponse>(
+        "${okbizFaqProperties.url}/api/faq/show?access_token=${resolvedToken}&site_id=1&id=${faqId}",
+          HttpMethod.GET,
+          requestEntity
+        )
 
       responseEntity.body?.faq?.answer?.pc
         ?.let {
           ChatMessage(MessageType.TALK, it, false) to true
         }
-        ?: scenarioService.findChatMessage(ScenarioService.KEY_UNKNOWN_ERROR) to false
+        ?: (scenarioService.findChatMessage(ScenarioService.KEY_UNKNOWN_ERROR) to false)
 
     } catch (ex: Throwable) {
       log.error("FAQ取得に失敗しました。", ex)

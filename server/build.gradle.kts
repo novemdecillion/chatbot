@@ -14,7 +14,7 @@ sourceSets.main {
 }
 
 group = "jp.co.supportas.chat"
-version = "0.0.1-SNAPSHOT"
+version = "0.0.2"
 java.sourceCompatibility = JavaVersion.VERSION_11
 
 repositories {
