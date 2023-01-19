@@ -176,7 +176,7 @@ class OKBIZService(private val okbizFaqProperties: OKBIZFAQProperties, val scena
             MessageNode(it.title, it.id)
           }
           .let {
-            ChatMessage(MessageType.TALK, it, false) to true
+            ChatMessage(MessageType.TALK, it, false) to false
           }
       }
     }
